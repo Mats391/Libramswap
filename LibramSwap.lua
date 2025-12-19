@@ -67,7 +67,7 @@ local PER_SPELL_THROTTLE = {
 
 -- spell ready allowance (in seconds) 
 -- used to handle client desync jank where client will cast something that is still on cooldown
-local SPELL_READY_ALLOWANCE = 0.15
+local SPELL_READY_ALLOWANCE = 0
 
 -- Consecration libram choices
 local CONSECRATION_FAITHFUL = "Libram of the Faithful"
@@ -503,76 +503,6 @@ local function HandleSpellCast(base, rank, spellId)
     end
 end
 
-local function TryEquipLibram(spellName, target, spellId)
-    if not LibramSwapDb.enabled then 
-        return 
-    end
-
-    if not spellName then 
-        return
-    end
-    
-    -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
-    local isValidTarget = IsValidTarget(spellName, target)
-    if not isValidTarget then
-        return
-    end
-
-    local libram = ResolveLibramForSpell(spellName)
-    if not libram then 
-        return
-    end
-
-    -- Already equipped?
-    local equipped = GetInventoryItemLink("player", 18)
-    if equipped and string_find(equipped, libram, 1, true) then
-        return
-    end
-    
-    local hasInBag = HasItemInBags(libram)
-    if not hasInBag then
-        return
-    end
-    
-        -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
-    if IsInteractionBusy() then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
-        return false
-    end
-
-    -- TODO Probably do this outside as we dont want to do this during Nampower Queue Pop
-    -- Dont change while currently casting
-    local _, _, _, casting, channeling = GetCurrentCastingInfo()
-    if casting or channeling then
-        return
-    end
-    
-    if not spellId then
-        spellId = GetSpellIdForName(spellName)
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Found Spell Id " .. spellId .. "|r")
-    end
-    
-    -- TODO: Check Cooldown. Is old code good?
-    
-    -- Check line of sight
-    local isInSight = IsTargetInSight(target)
-    if not isInSight then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No LOS to " .. target .. "|r")
-        return
-    end
-    
-    -- Check if target in range. No target = in range 
-    local isInRange = IsTargetInRange(spellName, spellId, target)
-    if not isInRange then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No range to " .. target .. "|r")
-        return
-    end
-    
-    -- TODO: Figure out how to check if facing target for offensive spells
-    
-    -- TODO actually equip libram
-end
-
 local function IsValidTarget(spellName, target)
     if NoTargetSpell[spellName] then
         return true
@@ -592,6 +522,16 @@ local function IsValidTarget(spellName, target)
     return not canAttack
 end
 
+local function IsSpellReady2(spellId)
+    -- local _, duration = GetSpellCooldown(spellId, BOOKTYPE_SPELL)
+    -- if duration > 0 then
+        -- return false
+    -- end
+    
+    local isUsable = IsSpellUsable(spellId)
+    return isUsable
+end
+
 local function IsTargetInRange(spellName, spellId, target)
     if not target then
         return true
@@ -605,7 +545,8 @@ local function IsTargetInRange(spellName, spellId, target)
         return true
     end
     
-    local maxRange = GetSpellRecField(spellId, "rangeMax")
+    -- TODO Add max ranges per spell
+    local maxRange = 40 --GetSpellRecField(spellId, "rangeMax")
     
     if MeleeTargetSpell[spellName] then
         return UnitXP("distanceBetween", "player", target, "meleeAutoAttack") <= maxRange;
@@ -614,7 +555,7 @@ local function IsTargetInRange(spellName, spellId, target)
     return UnitXP("distanceBetween", "player", target) <= maxRange;
 end
 
-local function IsTargetInSight(spellName, spellId, target)
+local function IsTargetInSight(spellName, target)
     if not target then
         return true
     end
@@ -628,6 +569,92 @@ local function IsTargetInSight(spellName, spellId, target)
     end
     
     return UnitXP("inSight", "player", target)
+end
+
+
+local function TryEquipLibram(spellName, target, spellId)
+    if not LibramSwapDb.enabled then 
+        return 
+    end
+    
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Try equipping libram for " .. spellName .. "|r")
+
+    if not spellName then 
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Spell|r")
+        return
+    end
+    
+    -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
+    local isValidTarget = IsValidTarget(spellName, target)
+    if not isValidTarget then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Invalid target " .. target .. "|r")
+        return
+    end
+
+    local libram = ResolveLibramForSpell(spellName)
+    if not libram then 
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Libram for " .. spellName .. "|r")
+        return
+    end
+
+    -- Already equipped?
+    local equipped = GetInventoryItemLink("player", 18)
+    if equipped and string_find(equipped, libram, 1, true) then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." already equipped|r")
+        return
+    end
+    
+    local hasInBag = HasItemInBags(libram)
+    if not hasInBag then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." not in bag|r")
+        return
+    end
+    
+        -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
+    if IsInteractionBusy() then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
+        return false
+    end
+
+    -- TODO Probably do this outside as we dont want to do this during Nampower Queue Pop
+    -- Dont change while currently casting
+    local _, _, _, casting, channeling = GetCurrentCastingInfo()
+    if casting ~= 0 or channeling ~= 0 then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Currently casting " .. casting .. "|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Currently channeling " .. channeling .. "|r")
+        return
+    end
+    
+    if not spellId then
+        spellId = GetSpellIdForName(spellName)
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Found Spell Id " .. spellId .. "|r")
+    end
+    
+    -- Check if spell is ready from cooldown etc
+    local isReady = IsSpellReady(spellName)
+    if not isReady then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Not ready to cast " .. spellName .. "|r")
+        return
+    end
+    
+    -- Check line of sight
+    local isInSight = IsTargetInSight(spellName, target)
+    if not isInSight then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No LOS to " .. target .. "|r")
+        return
+    end
+    
+    -- Check if target in range. No target = in range 
+    local isInRange = IsTargetInRange(spellName, spellId, target)
+    if not isInRange then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No range to " .. target .. "|r")
+        return
+    end
+    
+    -- TODO: Figure out how to check if facing target for offensive spells
+    
+    -- TODO actually equip libram
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Should swap to " .. libram .. "|r")
 end
 
 -- Hook: CastSpellByName (used by macros and scripts)
@@ -647,7 +674,7 @@ function CastSpell(spellIndex, bookType)
     local name, rank = GetSpellName(spellIndex, BOOKTYPE_SPELL)
     --HandleSpellCast(name, rank, spellIndex)
     
-    -- TODO Not even sure if I want to support this, not really used by me
+    -- TODO Not even sure if I want to support this, not really used by me    
     local target = "target"
     TryEquipLibram(spellName, target, spellIndex)
     return Original_CastSpell(spellIndex, bookType)
@@ -658,6 +685,10 @@ function UseAction(slot, checkCursor, onSelf)
     -- indicates this is a macro, we dont want to call for macros
     if GetActionText(slot) then
         return Original_UseAction(slot, checkCursor, onSelf)
+    end
+    
+    if checkCursor then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFF00FF00CheckCursor|r")
     end
 
     local target = "target"
