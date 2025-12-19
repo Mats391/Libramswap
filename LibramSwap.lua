@@ -74,11 +74,6 @@ LibramSwapDb = LibramSwapDb or {
 -- Keep original generic throttle for GCD spells
 local SWAP_THROTTLE_GENERIC = 1.48
 
--- Per-spell throttles (begin applying AFTER the first successful swap of that spell)
-local PER_SPELL_THROTTLE = {
-    ["Judgement"]       = 7.8,
-}
-
 -- spell ready allowance (in seconds) 
 -- used to handle client desync jank where client will cast something that is still on cooldown
 local SPELL_READY_ALLOWANCE = 0
@@ -355,65 +350,29 @@ local function TargetHealthPct()
     return (UnitHealth("target") / maxHP) * 100
 end
 
--- Per-spell throttle state
-local perSpellHasSwapped = {}   -- spellName(base) -> true after first successful swap
-local perSpellLastSwap   = {}   -- spellName(base) -> last swap time (after first)
-
--- Core equip with throttle policy
-local function EquipLibramForSpell(spellName, itemName)
-    -- Already equipped?
-    local equipped = GetEquippedLibram()
-    if equipped and string_find(equipped, itemName, 1, true) then
-        return false
-    end
-
+local function EquipLibram(bag, slot)
     -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
     if IsInteractionBusy() then
         DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
-        return false
-    end
-
-    -- Throttle selection
+        return
+    end    
+    
     local now = GetTime()
-    local perDur = PER_SPELL_THROTTLE[spellName]
-    if perDur then
-        -- Apply throttle ONLY after the first successful swap for this spell
-        if perSpellHasSwapped[spellName] then
-            local last = perSpellLastSwap[spellName] or 0
-            if (now - last) < perDur then
-                return false
-            end
-        end
-    else
-        -- Generic GCD-based throttle for other spells
-        if (now - lastSwapTime) < SWAP_THROTTLE_GENERIC then
-            return false
-        end
+    -- Respect the GCD
+    if (now - lastSwapTime) < SWAP_THROTTLE_GENERIC then
+        -- return
     end
-
-    local bag, slot = HasItemInBags(itemName)
-    if bag and slot then
-        if CursorHasItem and CursorHasItem() then
-            return false
-        end
-        UseContainerItem(bag, slot)
-        if perDur then
-            -- mark first swap and update per-spell timestamp
-            if not perSpellHasSwapped[spellName] then
-                perSpellHasSwapped[spellName] = true
-            end
-            perSpellLastSwap[spellName] = now
-        else
-            lastSwapTime = now
-        end
-
-        if LibramSwapDb.spam then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r Equipped |cFFFFD700" .. itemName .. "|r |cFF888888(" .. spellName .. ")|r")
-        end
-        
-        return true
+    
+    if CursorHasItem and CursorHasItem() then
+        return
     end
-    return false
+    
+    UseContainerItem(bag, slot)
+    lastSwapTime = now
+    
+    if LibramSwapDb.spam then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r Equipped |cFFFFD700" .. itemName .. "|r |cFF888888(" .. spellName .. ")|r")
+    end
 end
 
 local function ResolveLibramForSpell(spellName)
@@ -599,12 +558,6 @@ local function TryEquipLibram(spellName, target, spellId)
         DebugMessage("Libram " .. libram .." not in bag")
         return
     end
-    
-        -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
-    if IsInteractionBusy() then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
-        return false
-    end
 
     -- TODO Probably do this outside as we dont want to do this during Nampower Queue Pop
     -- Dont change while currently casting
@@ -644,7 +597,7 @@ local function TryEquipLibram(spellName, target, spellId)
     
     -- actually equip libram
     DebugMessage("Swap to " .. libram)
-    UseContainerItem(bag, slot)
+    EquipLibram(bag, slot)
 end
 
 local function OnQueuePopTryEquipLibram(spellId)
@@ -664,13 +617,6 @@ local function OnQueuePopTryEquipLibram(spellId)
     local libram = ResolveLibramForSpell(spellName)
     if not libram then 
         DebugMessage("No Libram for " .. spellName)
-        return
-    end
-    
-    -- Dont swap away on certain librams
-    local equipped = GetEquippedLibram()
-    if DontSwap[equipped] then
-        DebugMessage("Libram " .. equipped .. " equipped. Not swapping")
         return
     end
 
@@ -695,7 +641,7 @@ local function OnQueuePopTryEquipLibram(spellId)
     
     -- actually equip libram
     DebugMessage("Swap to " .. libram)
-    UseContainerItem(bag, slot)
+    EquipLibram(bag, slot)
 end
 
 -- Hook: CastSpellByName (used by macros and scripts)
