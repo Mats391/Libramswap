@@ -18,7 +18,7 @@ local GetTime               = GetTime
 local string_find           = string.find
 local BOOKTYPE_SPELL        = BOOKTYPE_SPELL or "spell"
 local superwow = SUPERWOW_VERSION
-local unitxp = pcall(UnitXP, "nop")
+local unitxp = pcall(UnitXP, "nop", "nop")
 
 if not GetNampowerVersion then
     DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Nampower required|r")
