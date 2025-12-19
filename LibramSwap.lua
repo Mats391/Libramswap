@@ -503,7 +503,7 @@ local function HandleSpellCast(base, rank, spellId)
     end
 end
 
-local function TryEquipLibram(spellName, spellId, target)
+local function TryEquipLibram(spellName, target, spellId)
     if not LibramSwapDb.enabled then 
         return 
     end
@@ -513,7 +513,7 @@ local function TryEquipLibram(spellName, spellId, target)
     end
     
     -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
-    local isValidTarget = IsValidTarget(spellName, targetGuid)
+    local isValidTarget = IsValidTarget(spellName, target)
     if not isValidTarget then
         return
     end
@@ -555,16 +555,16 @@ local function TryEquipLibram(spellName, spellId, target)
     -- TODO: Check Cooldown. Is old code good?
     
     -- Check line of sight
-    local isInSight = IsTargetInSight(targetGuid)
+    local isInSight = IsTargetInSight(target)
     if not isInSight then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No LOS to " .. targetGuid .. "|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No LOS to " .. target .. "|r")
         return
     end
     
     -- Check if target in range. No target = in range 
-    local isInRange = IsTargetInRange(spellName, spellId, targetGuid)
+    local isInRange = IsTargetInRange(spellName, spellId, target)
     if not isInRange then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No range to " .. targetGuid .. "|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No range to " .. target .. "|r")
         return
     end
     
@@ -597,6 +597,10 @@ local function IsTargetInRange(spellName, spellId, target)
         return true
     end
     
+    if target == "player" then
+        return true
+    end
+    
     if NoTargetSpell[spellName] then
         return true
     end
@@ -615,6 +619,10 @@ local function IsTargetInSight(spellName, spellId, target)
         return true
     end
     
+    if target == "player" then
+        return true
+    end
+    
     if NoTargetSpell[spellName] then
         return true
     end
@@ -625,7 +633,8 @@ end
 -- Hook: CastSpellByName (used by macros and scripts)
 function CastSpellByName(spellName, targetGuid)
     local name, rank = SplitNameAndRank(spellName)
-    HandleSpellCast(name, rank)
+    --HandleSpellCast(name, rank)
+    TryEquipLibram(spellName, targetGuid)
     return Original_CastSpellByName(spellName, targetGuid)
 end
 
@@ -636,7 +645,11 @@ function CastSpell(spellIndex, bookType)
     end
 
     local name, rank = GetSpellName(spellIndex, BOOKTYPE_SPELL)
-    HandleSpellCast(name, rank, spellIndex)
+    --HandleSpellCast(name, rank, spellIndex)
+    
+    -- TODO Not even sure if I want to support this, not really used by me
+    local target = "target"
+    TryEquipLibram(spellName, target, spellIndex)
     return Original_CastSpell(spellIndex, bookType)
 end
 
@@ -647,8 +660,14 @@ function UseAction(slot, checkCursor, onSelf)
         return Original_UseAction(slot, checkCursor, onSelf)
     end
 
+    local target = "target"
+    if onSelf then
+        target = "player"
+    end
+
     local name, rank = GetActionSpellName(slot)
-    HandleSpellCast(name, rank, id)
+    --HandleSpellCast(name, rank, id)
+    TryEquipLibram(name, target)
     return Original_UseAction(slot, checkCursor, onSelf)
 end
 
