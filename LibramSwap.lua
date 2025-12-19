@@ -485,43 +485,6 @@ local Original_CastSpellByName = CastSpellByName
 local Original_CastSpell = CastSpell
 local Original_UseAction = UseAction
 
--- Core handler for any spell cast event
-local function HandleSpellCast(base, rank, spellId)
-    if not LibramSwapDb.enabled then 
-        return 
-    end
-
-    if not base then 
-        return
-    end
-
-    local libram = ResolveLibramForSpell(base)
-    if not libram then 
-        return
-    end
-
-    -- Rank-aware readiness (spellId preferred if available)
-    if spellId then
-        ready = IsSpellReadyById(spellId)
-    else
-        local spellNameAndRank = (rank and rank ~= "") and (base .. "(" .. rank .. ")") or base
-        ready = IsSpellReady(spellNameAndRank)
-    end
-
-    if not ready then
-        return
-    end
-
-    if base == "Judgement" then
-        local hp = TargetHealthPct()
-        if hp and hp <= 35 then
-            EquipLibramForSpell(base, libram)
-        end
-    else
-        EquipLibramForSpell(base, libram)
-    end
-end
-
 local function IsValidTarget(spellName, target)
     if not SpellRanges[spellName] then
         return true
@@ -539,16 +502,6 @@ local function IsValidTarget(spellName, target)
     
     -- everything else needs friendly target
     return not canAttack
-end
-
-local function IsSpellReady2(spellId)
-    -- local _, duration = GetSpellCooldown(spellId, BOOKTYPE_SPELL)
-    -- if duration > 0 then
-        -- return false
-    -- end
-    
-    local isUsable = IsSpellUsable(spellId)
-    return isUsable
 end
 
 local function IsTargetInRange(spellName, spellId, target)
