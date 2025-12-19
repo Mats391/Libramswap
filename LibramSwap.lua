@@ -17,6 +17,21 @@ local GetActionText         = GetActionText
 local GetTime               = GetTime
 local string_find           = string.find
 local BOOKTYPE_SPELL        = BOOKTYPE_SPELL or "spell"
+local superwow = SUPERWOW_VERSION
+local unitxp = pcall(UnitXP, "nop")
+
+if not GetNampowerVersion then
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Nampower required|r")
+    return
+end
+if not unitxp then
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555UnitXp required|r")
+    return
+end
+if not superwow then
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555SuperWow required|r")
+    return
+end
 
 -- === Bag Index ===
 local NameIndex   = {}  -- [itemName] = {bag=#, slot=#, link="|Hitem:..|h[Name]|h|r"}
