@@ -143,6 +143,16 @@ WatchedNames[CONSECRATION_FARRAKI]  = true
 WatchedNames[HOLY_STRIKE_ETERNAL_TOWER] = true
 WatchedNames[HOLY_STRIKE_RADIANCE]  = true
 
+local _debug = true
+
+local function DebugMessage(message)
+    if not _debug then
+        return
+    end
+    
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555" .. message .. "|r")
+end
+
 -- Extract numeric itemID from an item link (1.12 safe)
 local function ItemIDFromLink(link)
     if not link then return nil end
@@ -565,36 +575,37 @@ local function TryEquipLibram(spellName, target, spellId)
         return 
     end
     
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Try equipping libram for " .. spellName .. "|r")
+    DebugMessage("Try equipping libram for " .. spellName .. ")
 
     if not spellName then 
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Spell|r")
+        DebugMessage("No Spell")
         return
     end
     
     -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
     local isValidTarget = IsValidTarget(spellName, target)
     if not isValidTarget then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Invalid target " .. target .. "|r")
+        DebugMessage("Invalid target " .. target)
         return
     end
 
     local libram = ResolveLibramForSpell(spellName)
     if not libram then 
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Libram for " .. spellName .. "|r")
+        DebugMessage("No Libram for " .. spellName)
         return
     end
 
     -- Already equipped?
     local equipped = GetInventoryItemLink("player", 18)
     if equipped and string_find(equipped, libram, 1, true) then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." already equipped|r")
+        DebugMessage("Libram " .. libram .." already equipped")
         return
     end
     
-    local hasInBag = HasItemInBags(libram)
+    local bag, slot = HasItemInBags(libram)
+    local hasInBag = bag and slot
     if not hasInBag then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." not in bag|r")
+        DebugMessage("Libram " .. libram .." not in bag")
         return
     end
     
@@ -608,41 +619,41 @@ local function TryEquipLibram(spellName, target, spellId)
     -- Dont change while currently casting
     local _, _, _, casting, channeling = GetCurrentCastingInfo()
     if casting ~= 0 or channeling ~= 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Currently casting " .. casting .. "|r")
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Currently channeling " .. channeling .. "|r")
+        DebugMessage("Currently casting")
         return
     end
     
     if not spellId then
         spellId = GetSpellIdForName(spellName)
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Found Spell Id " .. spellId .. "|r")
+        DebugMessage("Found Spell Id " .. spellId)
     end
     
     -- Check if spell is ready from cooldown etc
     local isReady = IsSpellReady(spellName)
     if not isReady then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Not ready to cast " .. spellName .. "|r")
+        DebugMessage("Not ready to cast " .. spellName)
         return
     end
     
     -- Check line of sight
     local isInSight = IsTargetInSight(spellName, target)
     if not isInSight then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No LOS to " .. target .. "|r")
+        DebugMessage("No LOS to " .. target)
         return
     end
     
     -- Check if target in range. No target = in range 
     local isInRange = IsTargetInRange(spellName, spellId, target)
     if not isInRange then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No range to " .. target .. "|r")
+        DebugMessage("No range to " .. target)
         return
     end
     
     -- TODO: Figure out how to check if facing target for offensive spells
     
-    -- TODO actually equip libram
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Should swap to " .. libram .. "|r")
+    -- actually equip libram
+    DebugMessage("Swap to " .. libram)
+    UseContainerItem(bag, slot)
 end
 
 local function OnQueuePopTryEquipLibram(spellId)
@@ -652,29 +663,30 @@ local function OnQueuePopTryEquipLibram(spellId)
     
     local spellName = SpellInfo(spellId)
     
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Queue popped for " .. spellName .. "|r")
+    DebugMessage("Queue popped for " .. spellName)
 
     if not spellName then 
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Spell|r")
+        DebugMessage("No Spell")
         return
     end
 
     local libram = ResolveLibramForSpell(spellName)
     if not libram then 
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Libram for " .. spellName .. "|r")
+        DebugMessage("No Libram for " .. spellName)
         return
     end
 
     -- Already equipped?
     local equipped = GetInventoryItemLink("player", 18)
     if equipped and string_find(equipped, libram, 1, true) then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." already equipped|r")
+        DebugMessage("Libram " .. libram .." already equipped")
         return
     end
     
-    local hasInBag = HasItemInBags(libram)
+    local bag, slot = HasItemInBags(libram)
+    local hasInBag = bag and slot
     if not hasInBag then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." not in bag|r")
+        DebugMessage("Libram " .. libram .." not in bag")
         return
     end
     
@@ -684,8 +696,9 @@ local function OnQueuePopTryEquipLibram(spellId)
         return false
     end
     
-    -- TODO actually equip libram
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Should swap to " .. libram .. "|r")
+    -- actually equip libram
+    DebugMessage("Swap to " .. libram)
+    UseContainerItem(bag, slot)
 end
 
 -- Hook: CastSpellByName (used by macros and scripts)
