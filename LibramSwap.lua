@@ -590,7 +590,7 @@ local function TryEquipLibram(spellName, target, spellId)
         return 
     end
     
-    DebugMessage("Try equipping libram for " .. spellName .. ")
+    DebugMessage("Try equipping libram for " .. spellName)
 
     if not spellName then 
         DebugMessage("No Spell")
