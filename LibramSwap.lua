@@ -180,6 +180,7 @@ local LibramSwapFrame = CreateFrame("Frame")
 LibramSwapFrame:RegisterEvent("PLAYER_LOGIN")
 LibramSwapFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 LibramSwapFrame:RegisterEvent("BAG_UPDATE")
+LibramSwapFrame:RegisterEvent("SPELL_QUEUE_EVENT")
 
 LibramSwapFrame:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
