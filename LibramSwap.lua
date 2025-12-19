@@ -177,19 +177,6 @@ local function BuildBagIndex()
 end
 
 local LibramSwapFrame = CreateFrame("Frame")
-LibramSwapFrame:RegisterEvent("PLAYER_LOGIN")
-LibramSwapFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-LibramSwapFrame:RegisterEvent("BAG_UPDATE")
-LibramSwapFrame:RegisterEvent("SPELL_QUEUE_EVENT")
-
-LibramSwapFrame:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
-        BuildBagIndex()
-    elseif event == "BAG_UPDATE" then
-        -- simple & safe: rebuild immediately (cost is tiny since we only watch librams)
-        BuildBagIndex()
-    end
-end)
 
 -- =====================
 -- Rank-aware spell parsing
@@ -658,6 +645,49 @@ local function TryEquipLibram(spellName, target, spellId)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Should swap to " .. libram .. "|r")
 end
 
+local function OnQueuePopTryEquipLibram(spellId)
+    if not LibramSwapDb.enabled then 
+        return 
+    end
+    
+    local spellName = SpellInfo(spellId)
+    
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Queue popped for " .. spellName .. "|r")
+
+    if not spellName then 
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Spell|r")
+        return
+    end
+
+    local libram = ResolveLibramForSpell(spellName)
+    if not libram then 
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555No Libram for " .. spellName .. "|r")
+        return
+    end
+
+    -- Already equipped?
+    local equipped = GetInventoryItemLink("player", 18)
+    if equipped and string_find(equipped, libram, 1, true) then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." already equipped|r")
+        return
+    end
+    
+    local hasInBag = HasItemInBags(libram)
+    if not hasInBag then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Libram " .. libram .." not in bag|r")
+        return
+    end
+    
+        -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
+    if IsInteractionBusy() then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
+        return false
+    end
+    
+    -- TODO actually equip libram
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555Should swap to " .. libram .. "|r")
+end
+
 -- Hook: CastSpellByName (used by macros and scripts)
 function CastSpellByName(spellName, targetGuid)
     local name, rank = SplitNameAndRank(spellName)
@@ -785,3 +815,23 @@ SLASH_LIBRAMSWAP2 = "/lswap"
 SLASH_LIBRAMSWAP3 = "/ls"
 SlashCmdList["LIBRAMSWAP"] = HandleLibramSwapCommand
 
+LibramSwapFrame:RegisterEvent("PLAYER_LOGIN")
+LibramSwapFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+LibramSwapFrame:RegisterEvent("BAG_UPDATE")
+LibramSwapFrame:RegisterEvent("SPELL_QUEUE_EVENT")
+
+LibramSwapFrame:SetScript("OnEvent", function()
+    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+        BuildBagIndex()
+    elseif event == "BAG_UPDATE" then
+        -- simple & safe: rebuild immediately (cost is tiny since we only watch librams)
+        BuildBagIndex()
+    elseif event == "SPELL_QUEUE_EVENT" then
+        		-- arg1 is eventCode, arg2 is spellId
+		-- NORMAL_QUEUE_POPPED = 3
+		if arg1 ~= 3 then
+			return
+		end
+        OnQueuePopTryEquipLibram(arg2)
+    end
+end)
