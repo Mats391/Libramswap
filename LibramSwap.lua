@@ -15,6 +15,7 @@ local GetSpellName          = GetSpellName
 local GetSpellCooldown      = GetSpellCooldown
 local GetActionText         = GetActionText
 local GetTime               = GetTime
+local GetItemStatsField     = GetItemStatsField
 local string_find           = string.find
 local BOOKTYPE_SPELL        = BOOKTYPE_SPELL or "spell"
 local superwow = SUPERWOW_VERSION
@@ -108,7 +109,6 @@ local LibramMap = {
     ["Seal of Command"]               = "Libram of Hope",
     ["Seal of the Crusader"]          = "Libram of Fervor",
     ["Seal of Righteousness"]         = "Libram of Hope",
-    ["Devotion Aura"]                 = "Libram of Truth",
     ["Blessing of Wisdom"]            = "Libram of Veracity",
     ["Blessing of Might"]             = "Libram of Veracity",
     ["Blessing of Kings"]             = "Libram of Veracity",
@@ -120,6 +120,11 @@ local LibramMap = {
     ["Greater Blessing of Sanctuary"] = "Libram of Veracity",
     ["Greater Blessing of Light"]     = "Libram of Veracity",
     ["Greater Blessing of Salvation"] = "Libram of Veracity",
+}
+
+-- Dont Swap libram, if these equipped
+local DontSwap = {
+    ["Libram of Truth"] = true
 }
 
 local EnemyTargetSpell = {
@@ -177,6 +182,17 @@ local function ItemIDFromLink(link)
     if not link then return nil end
     local _, _, id = string_find(link, "item:(%d+)")
     return id and tonumber(id) or nil
+end
+
+local function GetEquippedLibram()
+    local itemLink = GetInventoryItemLink("player", 18)
+    local itemId = ItemIDFromLink(itemLink)
+    if not itemId then
+        return nil
+    end
+    
+    local itemName = GetItemInfo(itemId)
+    return itemName
 end
 
 local function BuildBagIndex()
@@ -327,7 +343,7 @@ end
 
 -- whether or not the player has the libram, either in bag or equipped
 local function HasLibram(libramName)
-    local equipped = GetInventoryItemLink("player", 18)
+    local equipped = GetEquippedLibram()
     return (equipped == libramName) or HasItemInBags(libramName)
 end
 
@@ -346,7 +362,7 @@ local perSpellLastSwap   = {}   -- spellName(base) -> last swap time (after firs
 -- Core equip with throttle policy
 local function EquipLibramForSpell(spellName, itemName)
     -- Already equipped?
-    local equipped = GetInventoryItemLink("player", 18)
+    local equipped = GetEquippedLibram()
     if equipped and string_find(equipped, itemName, 1, true) then
         return false
     end
@@ -564,9 +580,15 @@ local function TryEquipLibram(spellName, target, spellId)
         return
     end
 
+    -- Dont swap away on certain librams
+    local equipped = GetEquippedLibram()
+    if DontSwap[equipped] then
+        DebugMessage("Libram " .. equipped .." equipped. Not swapping")
+        return
+    end
+    
     -- Already equipped?
-    local equipped = GetInventoryItemLink("player", 18)
-    if equipped and string_find(equipped, libram, 1, true) then
+    if equipped and equipped == libram then
         DebugMessage("Libram " .. libram .." already equipped")
         return
     end
@@ -644,10 +666,16 @@ local function OnQueuePopTryEquipLibram(spellId)
         DebugMessage("No Libram for " .. spellName)
         return
     end
+    
+    -- Dont swap away on certain librams
+    local equipped = GetEquippedLibram()
+    if DontSwap[equipped] then
+        DebugMessage("Libram " .. equipped .. " equipped. Not swapping")
+        return
+    end
 
     -- Already equipped?
-    local equipped = GetInventoryItemLink("player", 18)
-    if equipped and string_find(equipped, libram, 1, true) then
+    if equipped and equipped == libram then
         DebugMessage("Libram " .. libram .." already equipped")
         return
     end
