@@ -164,7 +164,7 @@ WatchedNames[CONSECRATION_FARRAKI]  = true
 WatchedNames[HOLY_STRIKE_ETERNAL_TOWER] = true
 WatchedNames[HOLY_STRIKE_RADIANCE]  = true
 
-local _debug = true
+local _debug = false
 
 local function DebugMessage(message)
     if not _debug then
