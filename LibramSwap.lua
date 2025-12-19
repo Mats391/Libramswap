@@ -131,20 +131,26 @@ local EnemyTargetSpell = {
     ["Judgement"] = true,
 }
 
-local NoTargetSpell = {
-    ["Consecration"] = true,
-    ["Holy Shield"] = true,
-    ["Seal of Wisdom"] = true,
-    ["Seal of Light"] = true,
-    ["Seal of Justice"] = true,
-    ["Seal of Command"] = true,
-    ["Seal of the Crusader"] = true,
-    ["Seal of Righteousness"] = true,
-}
-
-local MeleeTargetSpell = {
-    ["Crusader Strike"] = true,
-    ["Holy Strike"] = true,
+local SpellRanges = {
+    ["Holy Light"]                    = 40,
+    ["Flash of Light"]                = 40,
+    ["Cleanse"]                       = 30,
+    ["Hammer of Justice"]             = 10,
+    ["Hand of Freedom"]               = 30,
+    ["Crusader Strike"]               = 5,
+    ["Holy Strike"]                   = 5,
+    ["Judgement"]                     = 10,
+    ["Blessing of Wisdom"]            = 30,
+    ["Blessing of Might"]             = 30,
+    ["Blessing of Kings"]             = 30,
+    ["Blessing of Sanctuary"]         = 30,
+    ["Blessing of Light"]             = 30,
+    ["Blessing of Salvation"]         = 30,
+    ["Greater Blessing of Wisdom"]    = 40,
+    ["Greater Blessing of Kings"]     = 40,
+    ["Greater Blessing of Sanctuary"] = 40,
+    ["Greater Blessing of Light"]     = 40,
+    ["Greater Blessing of Salvation"] = 40,
 }
 
 local WatchedNames = {}
@@ -517,7 +523,7 @@ local function HandleSpellCast(base, rank, spellId)
 end
 
 local function IsValidTarget(spellName, target)
-    if NoTargetSpell[spellName] then
+    if not SpellRanges[spellName] then
         return true
     end
     
@@ -554,14 +560,12 @@ local function IsTargetInRange(spellName, spellId, target)
         return true
     end
     
-    if NoTargetSpell[spellName] then
+    local maxRange = SpellRanges[spellName]
+    if not maxRange then
         return true
     end
     
-    -- TODO Add max ranges per spell
-    local maxRange = 40 --GetSpellRecField(spellId, "rangeMax")
-    
-    if MeleeTargetSpell[spellName] then
+    if maxRange <= 5 then
         return UnitXP("distanceBetween", "player", target, "meleeAutoAttack") <= maxRange;
     end
     
@@ -577,7 +581,7 @@ local function IsTargetInSight(spellName, target)
         return true
     end
     
-    if NoTargetSpell[spellName] then
+    if not SpellRanges[spellName] then
         return true
     end
     
