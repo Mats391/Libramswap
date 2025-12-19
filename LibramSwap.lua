@@ -109,6 +109,29 @@ local LibramMap = {
     ["Greater Blessing of Salvation"] = "Libram of Veracity",
 }
 
+local EnemyTargetSpell = {
+    ["Hammer of Justice"] = true,
+    ["Crusader Strike"] = true,
+    ["Holy Strike"] = true,
+    ["Judgement"] = true,
+}
+
+local NoTargetSpell = {
+    ["Consecration"] = true,
+    ["Holy Shield"] = true,
+    ["Seal of Wisdom"] = true,
+    ["Seal of Light"] = true,
+    ["Seal of Justice"] = true,
+    ["Seal of Command"] = true,
+    ["Seal of the Crusader"] = true,
+    ["Seal of Righteousness"] = true,
+}
+
+local MeleeTargetSpell = {
+    ["Crusader Strike"] = true,
+    ["Holy Strike"] = true,
+}
+
 local WatchedNames = {}
 for _, name in pairs(LibramMap) do
     WatchedNames[name] = true
@@ -480,11 +503,130 @@ local function HandleSpellCast(base, rank, spellId)
     end
 end
 
+local function TryEquipLibram(spellName, spellId, target)
+    if not LibramSwapDb.enabled then 
+        return 
+    end
+
+    if not spellName then 
+        return
+    end
+    
+    -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
+    local isValidTarget = IsValidTarget(spellName, targetGuid)
+    if not isValidTarget then
+        return
+    end
+
+    local libram = ResolveLibramForSpell(spellName)
+    if not libram then 
+        return
+    end
+
+    -- Already equipped?
+    local equipped = GetInventoryItemLink("player", 18)
+    if equipped and string_find(equipped, libram, 1, true) then
+        return
+    end
+    
+    local hasInBag = HasItemInBags(libram)
+    if not hasInBag then
+        return
+    end
+    
+        -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
+    if IsInteractionBusy() then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
+        return false
+    end
+
+    -- TODO Probably do this outside as we dont want to do this during Nampower Queue Pop
+    -- Dont change while currently casting
+    local _, _, _, casting, channeling = GetCurrentCastingInfo()
+    if casting or channeling then
+        return
+    end
+    
+    if not spellId then
+        spellId = GetSpellIdForName(spellName)
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Found Spell Id " .. spellId .. "|r")
+    end
+    
+    -- TODO: Check Cooldown. Is old code good?
+    
+    -- Check line of sight
+    local isInSight = IsTargetInSight(targetGuid)
+    if not isInSight then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No LOS to " .. targetGuid .. "|r")
+        return
+    end
+    
+    -- Check if target in range. No target = in range 
+    local isInRange = IsTargetInRange(spellName, spellId, targetGuid)
+    if not isInRange then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555No range to " .. targetGuid .. "|r")
+        return
+    end
+    
+    -- TODO: Figure out how to check if facing target for offensive spells
+    
+    -- TODO actually equip libram
+end
+
+local function IsValidTarget(spellName, target)
+    if NoTargetSpell[spellName] then
+        return true
+    end
+    
+    -- everything else needs targets
+    if not target then
+        return false
+    end
+    
+    local canAttack = UnitCanAttack("player", target)
+    if EnemyTargetSpell[spellName] then
+        return canAttack
+    end
+    
+    -- everything else needs friendly target
+    return not canAttack
+end
+
+local function IsTargetInRange(spellName, spellId, target)
+    if not target then
+        return true
+    end
+    
+    if NoTargetSpell[spellName] then
+        return true
+    end
+    
+    local maxRange = GetSpellRecField(spellId, "rangeMax")
+    
+    if MeleeTargetSpell[spellName] then
+        return UnitXP("distanceBetween", "player", target, "meleeAutoAttack") <= maxRange;
+    end
+    
+    return UnitXP("distanceBetween", "player", target) <= maxRange;
+end
+
+local function IsTargetInSight(spellName, spellId, target)
+    if not target then
+        return true
+    end
+    
+    if NoTargetSpell[spellName] then
+        return true
+    end
+    
+    return UnitXP("inSight", "player", target)
+end
+
 -- Hook: CastSpellByName (used by macros and scripts)
-function CastSpellByName(spellName, bookType)
+function CastSpellByName(spellName, targetGuid)
     local name, rank = SplitNameAndRank(spellName)
     HandleSpellCast(name, rank)
-    return Original_CastSpellByName(spellName, bookType)
+    return Original_CastSpellByName(spellName, targetGuid)
 end
 
 -- Hook: CastSpell (used by spellbook and macros)
