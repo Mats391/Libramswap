@@ -52,8 +52,6 @@ local function IsInteractionBusy()
         or (GossipFrame and GossipFrame:IsVisible())
 end
 
-local lastEquippedLibram = nil
-
 -- Global (generic) throttle for GCD-based swaps
 local lastSwapTime = 0
 
@@ -329,7 +327,8 @@ end
 
 -- whether or not the player has the libram, either in bag or equipped
 local function HasLibram(libramName)
-    return (lastEquippedLibram == libramName) or HasItemInBags(libramName)
+    local equipped = GetInventoryItemLink("player", 18)
+    return (equipped == libramName) or HasItemInBags(libramName)
 end
 
 -- Returns target HP% (number) or nil if no valid target
@@ -349,7 +348,6 @@ local function EquipLibramForSpell(spellName, itemName)
     -- Already equipped?
     local equipped = GetInventoryItemLink("player", 18)
     if equipped and string_find(equipped, itemName, 1, true) then
-        lastEquippedLibram = itemName
         return false
     end
 
@@ -383,7 +381,6 @@ local function EquipLibramForSpell(spellName, itemName)
             return false
         end
         UseContainerItem(bag, slot)
-        lastEquippedLibram = itemName
         if perDur then
             -- mark first swap and update per-spell timestamp
             if not perSpellHasSwapped[spellName] then
