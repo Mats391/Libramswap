@@ -491,10 +491,10 @@ local function IsTargetInRange(spellName, spellId, target)
     end
     
     if maxRange <= 5 then
-        return UnitXP("distanceBetween", "player", target, "meleeAutoAttack") <= maxRange;
+        return UnitXP("distanceBetween", "player", target, "meleeAutoAttack") < maxRange;
     end
     
-    return UnitXP("distanceBetween", "player", target) <= maxRange;
+    return UnitXP("distanceBetween", "player", target) < maxRange;
 end
 
 local function IsTargetInSight(spellName, target)
