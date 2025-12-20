@@ -233,6 +233,11 @@ end
 
 -- gets spell readiness by ID
 local function IsSpellReadyById(spellId)
+    local usable = IsSpellUsable(spellId)
+    if not usable then
+        return false
+    end
+
     local start, duration, enabled = GetSpellCooldown(spellId, BOOKTYPE_SPELL)
     if not (start and duration) then
         return false 
