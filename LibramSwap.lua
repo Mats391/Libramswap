@@ -35,11 +35,8 @@ if not superwow then
 end
 
 -- === Bag Index ===
-local LibramBagIndex   = {}  -- [libramId] = {bag=#, slot=#, link="|Hitem:..|h[Name]|h|r"}
+local LibramBagIndex   = {}  -- [libramId] = {bag=#, slot=#"}
 local reindexQueued = false
-
--- === Spell cache ===
-local SpellCache = {}
 
 -- Safety: block swaps when vendor/bank/auction/trade/mail/quest/gossip is open
 local function IsInteractionBusy()
@@ -73,14 +70,6 @@ LibramSwapDb = LibramSwapDb or {
 -- Keep original generic throttle for GCD spells
 local SWAP_THROTTLE_GENERIC = 1.48
 
--- spell ready allowance (in seconds) 
--- used to handle client desync jank where client will cast something that is still on cooldown
-local SPELL_READY_ALLOWANCE = 0
-
--- Consecration libram choices
-local CONSECRATION_FAITHFUL = "Libram of the Faithful"
-local CONSECRATION_FARRAKI  = "Libram of the Farraki Zealot"
-
 local LIBRAM_OF_FERVOR = 23203
 local LIBRAM_OF_FINAL_JUDGEMENT = 58240
 local LIBRAM_OF_GRACE = 22402
@@ -95,10 +84,15 @@ local LIBRAM_OF_THE_JUSTICAR = 61337
 local LIBRAM_OF_THE_RESOLUTE = 51804
 local LIBRAM_OF_VERACITY = 51799
 local LIBRAM_OF_TRUTH = 22400
+local LIBRAM_OF_THE_FARRAKI_ZEALOT = 58093
 
 -- Holy Strike libram choices
 local HOLY_STRIKE_ETERNAL_TOWER = LIBRAM_OF_THE_ETERNAL_TOWER
 local HOLY_STRIKE_RADIANCE  = LIBRAM_OF_RADIANCE
+
+-- Consecration libram choices
+local CONSECRATION_FAITHFUL = LIBRAM_OF_THE_FAITHFUL
+local CONSECRATION_FARRAKI  = LIBRAM_OF_THE_FARRAKI_ZEALOT
 
 -- Map spells -> preferred libram name (bag/equipped link substring match)
 local LibramMap = {
@@ -219,7 +213,7 @@ local function BuildBagIndex()
                 if link then
                     local id = ItemIDFromLink(link)
                     if id and WatchedLibrams[id] then
-                        LibramBagIndex[id] = { bag = bag, slot = slot, link = link }
+                        LibramBagIndex[id] = { bag = bag, slot = slot }
                     end
                 end
             end
@@ -245,67 +239,12 @@ end
 -- gets spell readiness by ID
 local function IsSpellReadyById(spellId)
     local usable = IsSpellUsable(spellId)
-    if not usable then
+    if usbale == 0 then
         return false
     end
-
-    local start, duration, enabled = GetSpellCooldown(spellId, BOOKTYPE_SPELL)
-    if not (start and duration) then
-        return false 
-    end
-
-    if enabled == 0 then
-        return false 
-    end
-
-    if start == 0 or duration == 0 then
-        return true
-    end
-
-    -- needed for desync jank
-    -- sometimes the client will still cast the spell even when the api has some cooling down left
-    -- this happens a lot when mashing a key, this allows those casts to still swap
-    local remaining = (start + duration) - GetTime()
-    return remaining <= SPELL_READY_ALLOWANCE 
-end
-
--- =====================
--- Spell Readiness (1.12-safe, rank-aware)
--- =====================
--- Accepts: "Name" or "Name(Rank X)". If a rank is specified, require that exact rank.
--- Returns: ready:boolean
-local function IsSpellReady(spellSpec)
-    local spellId = SpellCache[spellSpec]
-
-    -- if not cached, find the spell and cache it
-    if not spellId then
-        local base, reqRank = SplitNameAndRank(spellSpec)
-        if not base then 
-            return false
-        end
-
-        for i = 1, 300 do
-            local name, rank = GetSpellName(i, BOOKTYPE_SPELL)
-            if not name then
-                break
-            end
-
-            local nameMatches = (name == base)
-            local rankMatches = (not reqRank) or (rank and rank == reqRank)
-            if nameMatches and rankMatches then
-                spellId = i
-                SpellCache[spellSpec] = i
-                break
-            end
-        end
-    end
-
-    -- not a real spell, early return
-    if not spellId then
-        return false
-    end
-
-    return IsSpellReadyById(spellId)
+    
+    local cd = GetSpellIdCooldown(spellId)
+    return cd.isOnCooldown == 0
 end
 
 -- =====================
@@ -477,7 +416,7 @@ local function IsValidTarget(spellName, target)
     return not canAttack
 end
 
-local function IsTargetInRange(spellName, spellId, target)
+local function IsTargetInRange(spellId, target)
     if not target then
         return true
     end
@@ -486,7 +425,7 @@ local function IsTargetInRange(spellName, spellId, target)
         return true
     end
     
-    return IsSpellInRange(spellName, target)
+    return IsSpellInRange(spellId, target)
 end
 
 local function IsTargetInSight(spellName, target)
@@ -562,7 +501,7 @@ local function TryEquipLibram(spellName, target, spellId)
     end
     
     -- Check if spell is ready from cooldown etc
-    local isReady = IsSpellReady(spellName)
+    local isReady = IsSpellReadyById(spellId)
     if not isReady then
         DebugMessage("Not ready to cast " .. spellName)
         return
@@ -576,7 +515,7 @@ local function TryEquipLibram(spellName, target, spellId)
     end
     
     -- Check if target in range. No target = in range 
-    local isInRange = IsTargetInRange(spellName, spellId, target)
+    local isInRange = IsTargetInRange(spellId, target)
     if isInRange == 0 then
         DebugMessage("No range to " .. target)
         return
