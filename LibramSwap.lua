@@ -12,10 +12,9 @@ local GetContainerItemLink  = GetContainerItemLink
 local UseContainerItem      = UseContainerItem
 local GetInventoryItemLink  = GetInventoryItemLink
 local GetSpellName          = GetSpellName
-local GetSpellCooldown      = GetSpellCooldown
+local GetEquippedItem       = GetEquippedItem
 local GetActionText         = GetActionText
 local GetTime               = GetTime
-local GetItemStatsField     = GetItemStatsField
 local string_find           = string.find
 local BOOKTYPE_SPELL        = BOOKTYPE_SPELL or "spell"
 local superwow = SUPERWOW_VERSION
@@ -170,7 +169,7 @@ WatchedLibrams[CONSECRATION_FARRAKI]  = true
 WatchedLibrams[HOLY_STRIKE_ETERNAL_TOWER] = true
 WatchedLibrams[HOLY_STRIKE_RADIANCE]  = true
 
-local _debug = true
+local _debug = false
 
 local function DebugMessage(message)
     if not _debug then
@@ -192,13 +191,12 @@ local function ItemIDFromLink(link)
 end
 
 local function GetEquippedLibram()
-    local itemLink = GetInventoryItemLink("player", 18)
-    local itemId = ItemIDFromLink(itemLink)
-    if not itemId then
+    local libram = GetEquippedItem("player", 18)
+    if not libram then
         return -1
     end
-    
-    return itemId
+        
+    return libram.itemId
 end
 
 local function BuildBagIndex()
@@ -222,19 +220,6 @@ local function BuildBagIndex()
 end
 
 local LibramSwapFrame = CreateFrame("Frame")
-
--- =====================
--- Rank-aware spell parsing
--- =====================
-local function SplitNameAndRank(spellSpec)
-    if not spellSpec then return nil, nil end
-    -- string.find returns: start, finish, CAP1, CAP2, ...
-    local _, _, base, rnum = string_find(spellSpec, "^(.-)%s*%(%s*[Rr][Aa][Nn][Kk]%s*(%d+)%s*%)%s*$")
-    if base then
-        return (string.gsub(base, "%s+$", "")), ("Rank " .. rnum)
-    end
-    return (string.gsub(spellSpec, "%s+$", "")), nil
-end
 
 -- gets spell readiness by ID
 local function IsSpellReadyById(spellId)
@@ -609,7 +594,6 @@ function UseAction(slot, checkCursor, onSelf)
     end
 
     local name, rank = GetActionSpellName(slot)
-    --HandleSpellCast(name, rank, id)
     TryEquipLibram(name, target)
     return Original_UseAction(slot, checkCursor, onSelf)
 end
