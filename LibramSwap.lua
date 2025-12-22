@@ -567,11 +567,6 @@ local function OnQueuePopTryEquipLibram(spellId)
         DebugMessage("Libram " .. libram .." not in bag")
         return
     end
-        -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
-    if IsInteractionBusy() then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
-        return false
-    end
     
     -- actually equip libram
     DebugMessage("Swap to " .. libram)
@@ -580,8 +575,6 @@ end
 
 -- Hook: CastSpellByName (used by macros and scripts)
 function CastSpellByName(spellName, targetGuid)
-    local name, rank = SplitNameAndRank(spellName)
-    --HandleSpellCast(name, rank)
     TryEquipLibram(spellName, targetGuid)
     return Original_CastSpellByName(spellName, targetGuid)
 end
@@ -592,12 +585,10 @@ function CastSpell(spellIndex, bookType)
         return Original_CastSpell(spellIndex, bookType)
     end
 
-    local name, rank = GetSpellName(spellIndex, BOOKTYPE_SPELL)
-    --HandleSpellCast(name, rank, spellIndex)
+    local spellName = GetSpellName(spellIndex, bookType)
     
-    -- TODO Not even sure if I want to support this, not really used by me    
     local target = "target"
-    TryEquipLibram(spellName, target, spellIndex)
+    TryEquipLibram(spellName, target)
     return Original_CastSpell(spellIndex, bookType)
 end
 
