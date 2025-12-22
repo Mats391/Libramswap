@@ -490,16 +490,7 @@ local function IsTargetInRange(spellName, spellId, target)
         return true
     end
     
-    local maxRange = SpellRanges[spellName]
-    if not maxRange then
-        return true
-    end
-    
-    if maxRange <= 5 then
-        return UnitXP("distanceBetween", "player", target, "meleeAutoAttack") < maxRange;
-    end
-    
-    return UnitXP("distanceBetween", "player", target) < maxRange;
+    return IsSpellInRange(spellName, target)
 end
 
 local function IsTargetInSight(spellName, target)
@@ -524,8 +515,6 @@ local function TryEquipLibram(spellName, target, spellId)
         return 
     end
     
-    DebugMessage("Try equipping libram for " .. spellName)
-
     if not spellName then 
         DebugMessage("No Spell")
         return
@@ -564,7 +553,6 @@ local function TryEquipLibram(spellName, target, spellId)
         return
     end
 
-    -- TODO Probably do this outside as we dont want to do this during Nampower Queue Pop
     -- Dont change while currently casting
     local _, _, _, casting, channeling = GetCurrentCastingInfo()
     if casting ~= 0 or channeling ~= 0 then
@@ -593,7 +581,7 @@ local function TryEquipLibram(spellName, target, spellId)
     
     -- Check if target in range. No target = in range 
     local isInRange = IsTargetInRange(spellName, spellId, target)
-    if not isInRange then
+    if isInRange == 0 then
         DebugMessage("No range to " .. target)
         return
     end
