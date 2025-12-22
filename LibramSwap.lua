@@ -35,8 +35,7 @@ if not superwow then
 end
 
 -- === Bag Index ===
-local NameIndex   = {}  -- [itemName] = {bag=#, slot=#, link="|Hitem:..|h[Name]|h|r"}
-local IdIndex     = {}  -- [itemID]   = {bag=#, slot=#, link=...}  (optional use later)
+local LibramBagIndex   = {}  -- [libramId] = {bag=#, slot=#, link="|Hitem:..|h[Name]|h|r"}
 local reindexQueued = false
 
 -- === Spell cache ===
@@ -82,44 +81,59 @@ local SPELL_READY_ALLOWANCE = 0
 local CONSECRATION_FAITHFUL = "Libram of the Faithful"
 local CONSECRATION_FARRAKI  = "Libram of the Farraki Zealot"
 
+local LIBRAM_OF_FERVOR = 23203
+local LIBRAM_OF_FINAL_JUDGEMENT = 58240
+local LIBRAM_OF_GRACE = 22402
+local LIBRAM_OF_HOPE = 22401
+local LIBRAM_OF_LIGHT = 23006
+local LIBRAM_OF_DIVINITY = 23201
+local LIBRAM_OF_RADIANCE = 55470
+local LIBRAM_OF_THE_DREAMGUARD = 61203
+local LIBRAM_OF_THE_ETERNAL_TOWER = 55110
+local LIBRAM_OF_THE_FAITHFUL = 61443
+local LIBRAM_OF_THE_JUSTICAR = 61337
+local LIBRAM_OF_THE_RESOLUTE = 51804
+local LIBRAM_OF_VERACITY = 51799
+local LIBRAM_OF_TRUTH = 22400
+
 -- Holy Strike libram choices
-local HOLY_STRIKE_ETERNAL_TOWER = "Libram of the Eternal Tower"
-local HOLY_STRIKE_RADIANCE  = "Libram of Radiance"
+local HOLY_STRIKE_ETERNAL_TOWER = LIBRAM_OF_THE_ETERNAL_TOWER
+local HOLY_STRIKE_RADIANCE  = LIBRAM_OF_RADIANCE
 
 -- Map spells -> preferred libram name (bag/equipped link substring match)
 local LibramMap = {
-    ["Consecration"]                  = "Libram of the Faithful",
-    ["Holy Shield"]                   = "Libram of the Dreamguard",
-    ["Holy Light"]                    = "Libram of Radiance",
-    ["Flash of Light"]                = "Libram of Light",
-    ["Cleanse"]                       = "Libram of Grace",
-    ["Hammer of Justice"]             = "Libram of the Justicar",
-    ["Hand of Freedom"]               = "Libram of the Resolute",
-    ["Crusader Strike"]               = "Libram of the Eternal Tower",
-    ["Holy Strike"]                   = "Libram of the Eternal Tower",
-    ["Judgement"]                     = "Libram of Final Judgement",
-    ["Seal of Wisdom"]                = "Libram of Hope",
-    ["Seal of Light"]                 = "Libram of Hope",
-    ["Seal of Justice"]               = "Libram of Hope",
-    ["Seal of Command"]               = "Libram of Hope",
-    ["Seal of the Crusader"]          = "Libram of Fervor",
-    ["Seal of Righteousness"]         = "Libram of Hope",
-    ["Blessing of Wisdom"]            = "Libram of Veracity",
-    ["Blessing of Might"]             = "Libram of Veracity",
-    ["Blessing of Kings"]             = "Libram of Veracity",
-    ["Blessing of Sanctuary"]         = "Libram of Veracity",
-    ["Blessing of Light"]             = "Libram of Veracity",
-    ["Blessing of Salvation"]         = "Libram of Veracity",
-    ["Greater Blessing of Wisdom"]    = "Libram of Veracity",
-    ["Greater Blessing of Kings"]     = "Libram of Veracity",
-    ["Greater Blessing of Sanctuary"] = "Libram of Veracity",
-    ["Greater Blessing of Light"]     = "Libram of Veracity",
-    ["Greater Blessing of Salvation"] = "Libram of Veracity",
+    ["Consecration"]                  = LIBRAM_OF_THE_FAITHFUL,
+    ["Holy Shield"]                   = LIBRAM_OF_THE_DREAMGUARD,
+    ["Holy Light"]                    = LIBRAM_OF_RADIANCE,
+    ["Flash of Light"]                = LIBRAM_OF_LIGHT,
+    ["Cleanse"]                       = LIBRAM_OF_GRACE,
+    ["Hammer of Justice"]             = LIBRAM_OF_THE_JUSTICAR,
+    ["Hand of Freedom"]               = LIBRAM_OF_THE_RESOLUTE,
+    ["Crusader Strike"]               = LIBRAM_OF_THE_ETERNAL_TOWER,
+    ["Holy Strike"]                   = LIBRAM_OF_THE_ETERNAL_TOWER,
+    ["Judgement"]                     = LIBRAM_OF_FINAL_JUDGEMENT,
+    ["Seal of Wisdom"]                = LIBRAM_OF_HOPE,
+    ["Seal of Light"]                 = LIBRAM_OF_HOPE,
+    ["Seal of Justice"]               = LIBRAM_OF_HOPE,
+    ["Seal of Command"]               = LIBRAM_OF_HOPE,
+    ["Seal of the Crusader"]          = LIBRAM_OF_FERVOR,
+    ["Seal of Righteousness"]         = LIBRAM_OF_HOPE,
+    ["Blessing of Wisdom"]            = LIBRAM_OF_VERACITY,
+    ["Blessing of Might"]             = LIBRAM_OF_VERACITY,
+    ["Blessing of Kings"]             = LIBRAM_OF_VERACITY,
+    ["Blessing of Sanctuary"]         = LIBRAM_OF_VERACITY,
+    ["Blessing of Light"]             = LIBRAM_OF_VERACITY,
+    ["Blessing of Salvation"]         = LIBRAM_OF_VERACITY,
+    ["Greater Blessing of Wisdom"]    = LIBRAM_OF_VERACITY,
+    ["Greater Blessing of Kings"]     = LIBRAM_OF_VERACITY,
+    ["Greater Blessing of Sanctuary"] = LIBRAM_OF_VERACITY,
+    ["Greater Blessing of Light"]     = LIBRAM_OF_VERACITY,
+    ["Greater Blessing of Salvation"] = LIBRAM_OF_VERACITY,
 }
 
 -- Dont Swap libram, if these equipped
 local DontSwap = {
-    ["Libram of Truth"] = true
+    [LIBRAM_OF_TRUTH] = true
 }
 
 local EnemyTargetSpell = {
@@ -129,40 +143,40 @@ local EnemyTargetSpell = {
     ["Judgement"] = true,
 }
 
-local SpellRanges = {
-    ["Holy Light"]                    = 40,
-    ["Flash of Light"]                = 40,
-    ["Cleanse"]                       = 30,
-    ["Hammer of Justice"]             = 10,
-    ["Hand of Freedom"]               = 30,
-    ["Crusader Strike"]               = 5,
-    ["Holy Strike"]                   = 5,
-    ["Judgement"]                     = 10,
-    ["Blessing of Wisdom"]            = 30,
-    ["Blessing of Might"]             = 30,
-    ["Blessing of Kings"]             = 30,
-    ["Blessing of Sanctuary"]         = 30,
-    ["Blessing of Light"]             = 30,
-    ["Blessing of Salvation"]         = 30,
-    ["Greater Blessing of Wisdom"]    = 40,
-    ["Greater Blessing of Kings"]     = 40,
-    ["Greater Blessing of Sanctuary"] = 40,
-    ["Greater Blessing of Light"]     = 40,
-    ["Greater Blessing of Salvation"] = 40,
+local NoTargetSpell = {
+    ["Consecration"]                  = true,
+    ["Holy Shield"]                   = true,
+    ["Seal of Wisdom"]                = true,
+    ["Seal of Light"]                 = true,
+    ["Seal of Justice"]               = true,
+    ["Seal of Command"]               = true,
+    ["Seal of the Crusader"]          = true,
+    ["Seal of Righteousness"]         = true,
+    ["Blessing of Wisdom"]            = true,
+    ["Blessing of Might"]             = true,
+    ["Blessing of Kings"]             = true,
+    ["Blessing of Sanctuary"]         = true,
+    ["Blessing of Light"]             = true,
+    ["Blessing of Salvation"]         = true,
+    ["Greater Blessing of Wisdom"]    = true,
+    ["Greater Blessing of Kings"]     = true,
+    ["Greater Blessing of Sanctuary"] = true,
+    ["Greater Blessing of Light"]     = true,
+    ["Greater Blessing of Salvation"] = true,
 }
 
-local WatchedNames = {}
-for _, name in pairs(LibramMap) do
-    WatchedNames[name] = true
+local WatchedLibrams = {}
+for _, libramId in pairs(LibramMap) do
+    WatchedLibrams[libramId] = true
 end
 -- Consecration options
-WatchedNames[CONSECRATION_FAITHFUL] = true
-WatchedNames[CONSECRATION_FARRAKI]  = true
+WatchedLibrams[CONSECRATION_FAITHFUL] = true
+WatchedLibrams[CONSECRATION_FARRAKI]  = true
 -- Holy  Strike options
-WatchedNames[HOLY_STRIKE_ETERNAL_TOWER] = true
-WatchedNames[HOLY_STRIKE_RADIANCE]  = true
+WatchedLibrams[HOLY_STRIKE_ETERNAL_TOWER] = true
+WatchedLibrams[HOLY_STRIKE_RADIANCE]  = true
 
-local _debug = false
+local _debug = true
 
 local function DebugMessage(message)
     if not _debug then
@@ -176,24 +190,26 @@ end
 local function ItemIDFromLink(link)
     if not link then return nil end
     local _, _, id = string_find(link, "item:(%d+)")
-    return id and tonumber(id) or nil
+    if not id then
+        return nil
+    end
+    
+    return tonumber(id)
 end
 
 local function GetEquippedLibram()
     local itemLink = GetInventoryItemLink("player", 18)
     local itemId = ItemIDFromLink(itemLink)
     if not itemId then
-        return nil
+        return -1
     end
     
-    local itemName = GetItemInfo(itemId)
-    return itemName
+    return itemId
 end
 
 local function BuildBagIndex()
     -- wipe current
-    for k in pairs(NameIndex) do NameIndex[k] = nil end
-    for k in pairs(IdIndex)   do IdIndex[k]   = nil end
+    for k in pairs(LibramBagIndex) do LibramBagIndex[k] = nil end
 
     for bag = 0, 4 do
         local slots = GetContainerNumSlots(bag)
@@ -201,14 +217,9 @@ local function BuildBagIndex()
             for slot = 1, slots do
                 local link = GetContainerItemLink(bag, slot)
                 if link then
-                    -- Extract plain item name safely
-                    local _, _, bracketName = string_find(link, "%[(.-)%]")
-                    if bracketName and WatchedNames[bracketName] then
-                        NameIndex[bracketName] = { bag = bag, slot = slot, link = link }
-                        local id = ItemIDFromLink(link)
-                        if id then
-                            IdIndex[id] = { bag = bag, slot = slot, link = link }
-                        end
+                    local id = ItemIDFromLink(link)
+                    if id and WatchedLibrams[id] then
+                        LibramBagIndex[id] = { bag = bag, slot = slot, link = link }
                     end
                 end
             end
@@ -301,50 +312,35 @@ end
 -- Helpers
 -- =====================
 -- Returns bag, slot or nil
-local function HasItemInBags(itemName)
-    -- 1) Try cached slot first
-    local ref = NameIndex[itemName]
+local function HasItemInBags(libramId)
+    local ref = LibramBagIndex[libramId]
+    
     if ref then
         local current = GetContainerItemLink(ref.bag, ref.slot)
-        if current and string_find(current, itemName, 1, true) then
+        local id = ItemIDFromLink(current)
+        if id == libramId then
             return ref.bag, ref.slot
         end
         -- It moved; rebuild and try again
         BuildBagIndex()
-        ref = NameIndex[itemName]
+        ref = LibramBagIndex[libramId]
         if ref then
             local verify = GetContainerItemLink(ref.bag, ref.slot)
-            if verify and string_find(verify, itemName, 1, true) then
+            local id = ItemIDFromLink(verify)
+            if id == libramId then
                 return ref.bag, ref.slot
             end
         end
         return nil
     end
-
-    -- 2) Slow path (first time seeing this name in-session)
-    --    We keep it for resiliency; BuildBagIndex will capture it for next time.
-    for bag = 0, 4 do
-        local slots = GetContainerNumSlots(bag)
-        if slots and slots > 0 then
-            for slot = 1, slots do
-                local link = GetContainerItemLink(bag, slot)
-                if link and string.find(link, itemName, 1, true) then
-                    -- Update cache so future lookups are O(1)
-                    NameIndex[itemName] = { bag = bag, slot = slot, link = link }
-                    local id = ItemIDFromLink(link)
-                    if id then IdIndex[id] = { bag = bag, slot = slot, link = link } end
-                    return bag, slot
-                end
-            end
-        end
-    end
+    
     return nil
 end
 
 -- whether or not the player has the libram, either in bag or equipped
-local function HasLibram(libramName)
+local function HasLibram(libramId)
     local equipped = GetEquippedLibram()
-    return (equipped == libramName) or HasItemInBags(libramName)
+    return (equipped == libramId) or HasItemInBags(libramId)
 end
 
 -- Returns target HP% (number) or nil if no valid target
@@ -412,8 +408,8 @@ local function ResolveLibramForSpell(spellName)
 
     -- Fallbacks if best pick isn't present
     if spellName == "Flash of Light" then
-        if not HasLibram("Libram of Light") and HasLibram("Libram of Divinity") then
-            libram = "Libram of Divinity"
+        if not HasLibram(LIBRAM_OF_LIGHT) and HasLibram(LIBRAM_OF_DIVINITY) then
+            libram = LIBRAM_OF_DIVINITY
         end
     end
     return libram
@@ -463,7 +459,7 @@ local Original_CastSpell = CastSpell
 local Original_UseAction = UseAction
 
 local function IsValidTarget(spellName, target)
-    if not SpellRanges[spellName] then
+    if NoTargetSpell[spellName] then
         return true
     end
     
@@ -502,7 +498,7 @@ local function IsTargetInSight(spellName, target)
         return true
     end
     
-    if not SpellRanges[spellName] then
+    if NoTargetSpell[spellName] then
         return true
     end
     
@@ -517,13 +513,6 @@ local function TryEquipLibram(spellName, target, spellId)
     
     if not spellName then 
         DebugMessage("No Spell")
-        return
-    end
-    
-    -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
-    local isValidTarget = IsValidTarget(spellName, target)
-    if not isValidTarget then
-        DebugMessage("Invalid target " .. target)
         return
     end
 
@@ -550,6 +539,13 @@ local function TryEquipLibram(spellName, target, spellId)
     local hasInBag = bag and slot
     if not hasInBag then
         DebugMessage("Libram " .. libram .." not in bag")
+        return
+    end
+    
+    -- Is target required, do we have a target and is target valid for spell (enemy/friendly)?
+    local isValidTarget = IsValidTarget(spellName, target)
+    if not isValidTarget then
+        DebugMessage("Invalid target " .. target)
         return
     end
 
@@ -613,6 +609,13 @@ local function OnQueuePopTryEquipLibram(spellId)
         return
     end
 
+    -- Dont swap away on certain librams
+    local equipped = GetEquippedLibram()
+    if DontSwap[equipped] then
+        DebugMessage("Libram " .. equipped .." equipped. Not swapping")
+        return
+    end
+    
     -- Already equipped?
     if equipped and equipped == libram then
         DebugMessage("Libram " .. libram .." already equipped")
@@ -625,7 +628,6 @@ local function OnQueuePopTryEquipLibram(spellId)
         DebugMessage("Libram " .. libram .." not in bag")
         return
     end
-    
         -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
     if IsInteractionBusy() then
         DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
