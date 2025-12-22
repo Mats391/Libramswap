@@ -240,8 +240,8 @@ local function HasItemInBags(libramId)
     local ref = LibramBagIndex[libramId]
     
     if ref then
-        local current = GetContainerItemLink(ref.bag, ref.slot)
-        local id = ItemIDFromLink(current)
+        local current = GetBagItem(ref.bag, ref.slot)
+        local id = current.itemId
         if id == libramId then
             return ref.bag, ref.slot
         end
@@ -249,8 +249,8 @@ local function HasItemInBags(libramId)
         BuildBagIndex()
         ref = LibramBagIndex[libramId]
         if ref then
-            local verify = GetContainerItemLink(ref.bag, ref.slot)
-            local id = ItemIDFromLink(verify)
+            local verify = GetBagItem(ref.bag, ref.slot)
+            local id = verify.itemId
             if id == libramId then
                 return ref.bag, ref.slot
             end
