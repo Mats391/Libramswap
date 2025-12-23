@@ -179,17 +179,6 @@ local function DebugMessage(message)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwapDebug]:|r |cFFFF5555" .. message .. "|r")
 end
 
--- Extract numeric itemID from an item link (1.12 safe)
-local function ItemIDFromLink(link)
-    if not link then return nil end
-    local _, _, id = string_find(link, "item:(%d+)")
-    if not id then
-        return nil
-    end
-    
-    return tonumber(id)
-end
-
 local function GetEquippedLibram()
     local libram = GetEquippedItem("player", 18)
     if not libram then
@@ -202,15 +191,15 @@ end
 local function BuildBagIndex()
     -- wipe current
     for k in pairs(LibramBagIndex) do LibramBagIndex[k] = nil end
-
+    
     for bag = 0, 4 do
         local slots = GetContainerNumSlots(bag)
         if slots and slots > 0 then
             for slot = 1, slots do
-                local link = GetContainerItemLink(bag, slot)
-                if link then
-                    local id = ItemIDFromLink(link)
-                    if id and WatchedLibrams[id] then
+                local itemInfo = GetBagItem(bag, slot)
+                if itemInfo then
+                    local id = itemInfo.itemId
+                    if WatchedLibrams[id] then
                         LibramBagIndex[id] = { bag = bag, slot = slot }
                     end
                 end
