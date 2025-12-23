@@ -35,7 +35,6 @@ end
 
 -- === Bag Index ===
 local LibramBagIndex   = {}  -- [libramId] = {bag=#, slot=#"}
-local reindexQueued = false
 
 -- Safety: block swaps when vendor/bank/auction/trade/mail/quest/gossip is open
 local function IsInteractionBusy()
@@ -188,23 +187,24 @@ local function GetEquippedLibram()
     return libram.itemId
 end
 
-local function BuildBagIndex()
-    -- wipe current
-    for k in pairs(LibramBagIndex) do LibramBagIndex[k] = nil end
-    
-    for bag = 0, 4 do
-        local slots = GetContainerNumSlots(bag)
-        if slots and slots > 0 then
-            for slot = 1, slots do
-                local itemInfo = GetBagItem(bag, slot)
-                if itemInfo then
-                    local id = itemInfo.itemId
-                    if WatchedLibrams[id] then
-                        LibramBagIndex[id] = { bag = bag, slot = slot }
-                    end
+local function ScanBag(bag)
+    local slots = GetContainerNumSlots(bag)
+    if slots and slots > 0 then
+        for slot = 1, slots do
+            local itemInfo = GetBagItem(bag, slot)
+            if itemInfo then
+                local id = itemInfo.itemId
+                if WatchedLibrams[id] then
+                    LibramBagIndex[id] = { bag = bag, slot = slot }
                 end
             end
         end
+    end
+end
+
+local function BuildBagIndex()
+    for bag = 0, 4 do
+        ScanBag(bag)
     end
 end
 
@@ -264,7 +264,7 @@ local function TargetHealthPct()
     return (UnitHealth("target") / maxHP) * 100
 end
 
-local function EquipLibram(bag, slot)
+local function EquipLibram(bag, slot, oldLibram, newLibram)
     -- Block swaps if an interaction UI is open (prevents accidental selling/moving)
     if IsInteractionBusy() then
         DEFAULT_CHAT_FRAME:AddMessage("|cFFAAAAFF[LibramSwap]:|r |cFFFF5555Swap blocked (interaction window open).|r")
@@ -499,7 +499,7 @@ local function TryEquipLibram(spellName, target, spellId)
     
     -- actually equip libram
     DebugMessage("Swap to " .. libram)
-    EquipLibram(bag, slot)
+    EquipLibram(bag, slot, equipped, libram)
 end
 
 local function OnQueuePopTryEquipLibram(spellId)
@@ -544,7 +544,7 @@ local function OnQueuePopTryEquipLibram(spellId)
     
     -- actually equip libram
     DebugMessage("Swap to " .. libram)
-    EquipLibram(bag, slot)
+    EquipLibram(bag, slot, equipped, libram)
 end
 
 -- Hook: CastSpellByName (used by macros and scripts)
@@ -679,7 +679,7 @@ LibramSwapFrame:SetScript("OnEvent", function()
         BuildBagIndex()
     elseif event == "BAG_UPDATE" then
         -- simple & safe: rebuild immediately (cost is tiny since we only watch librams)
-        BuildBagIndex()
+        ScanBag(arg1)
     elseif event == "SPELL_QUEUE_EVENT" then
         		-- arg1 is eventCode, arg2 is spellId
 		-- NORMAL_QUEUE_POPPED = 3
