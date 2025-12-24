@@ -542,6 +542,13 @@ local function OnQueuePopTryEquipLibram(spellId)
         return
     end
     
+    -- Check if spell is ready from cooldown etc
+    local isReady = IsSpellReadyById(spellId)
+    if not isReady then
+        DebugMessage("Not ready to cast " .. spellName)
+        return
+    end
+    
     -- actually equip libram
     DebugMessage("Swap to " .. libram)
     EquipLibram(bag, slot, equipped, libram)
