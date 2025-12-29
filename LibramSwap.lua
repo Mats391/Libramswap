@@ -235,6 +235,7 @@ local function HasItemInBags(libramId)
             return ref.bag, ref.slot
         end
         -- It moved; rebuild and try again
+        LibramBagIndex[libramId] = nil
         BuildBagIndex()
         ref = LibramBagIndex[libramId]
         if ref then
