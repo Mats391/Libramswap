@@ -685,8 +685,9 @@ LibramSwapFrame:SetScript("OnEvent", function()
     if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         BuildBagIndex()
     elseif event == "BAG_UPDATE" then
-        -- simple & safe: rebuild immediately (cost is tiny since we only watch librams)
-        ScanBag(arg1)
+        if arg1 >= 0 and arg1 <= 4 then
+            ScanBag(arg1)
+        end
     elseif event == "SPELL_QUEUE_EVENT" then
         		-- arg1 is eventCode, arg2 is spellId
 		-- NORMAL_QUEUE_POPPED = 3
